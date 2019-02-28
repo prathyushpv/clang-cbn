@@ -222,12 +222,23 @@ public:
       std::string thunkExpression = generateThunkExpression (expr);
       std::stringstream thunkStr;
       std::string exp_type = expr->getType ().getAsString ();
-      thunkStr <<  "void *thunk"<<thunk_no<<"(void* e)\n"
-                   "{\n"
-                   "\tstruct env"<<thunk_no<<" *env = (struct env"<<thunk_no<<"*)e;\n"
-                   "\t\n"
-                   "\treturn &("<<thunkExpression<<");\n"
-                   "}\n";
+      bool LValue = expr->IgnoreImpCasts ()->isLValue();
+      if(LValue)
+        thunkStr <<  "void *thunk"<<thunk_no<<"(void* e)\n"
+                 <<  "{\n"
+                 <<  "\tstruct env"<<thunk_no<<" *env = (struct env"<<thunk_no<<"*)e;\n"
+                 <<  "\t\n"
+                 <<  "\treturn &("<<thunkExpression<<");\n"
+                 <<  "}\n";
+      else
+        thunkStr <<  "void *thunk"<<thunk_no<<"(void* e)\n"
+                 <<  "{\n"
+                 <<  "\tstruct env"<<thunk_no<<" *env = (struct env"<<thunk_no<<"*)e;\n"
+                 <<  "\tenv->__cbn_result = " << thunkExpression << ";\n"
+                 <<  "\t\n"
+                 <<  "\treturn &(env->__cbn_result);\n"
+                 <<  "}\n";
+
       std::string thunk = thunkStr.str();
 //      std::cout<<thunk;
       return thunk;
@@ -235,12 +246,15 @@ public:
 
     std::string generateEnv(const Expr *expr, int thunk_no){
       std::string envMembers = generateEnvMembers (expr);
+//      std::string result_var =
       std::stringstream envStr;
       envStr << "struct env"<<thunk_no<<"\n"
-                 "{\n"
-                 ""<<envMembers<<"\n"
-                 "};\n";
+                 <<"{\n"
+                 <<""<<envMembers<<"\n"
+                 <<(!expr->IgnoreImpCasts ()->isLValue()?"\t"+expr->getType ().getAsString ()+" __cbn_result;\n":"")
+                 <<"};\n";
       std::string env = envStr.str();
+//      std::cout<<expr->getType ().getAsString ()<<"\n\n\n\n";
 //      std::cout<<env;
       return env;
     }
