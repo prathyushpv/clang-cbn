@@ -26,7 +26,6 @@ using namespace clang::ast_matchers;
 SourceLocation initialLocation;
 ASTContext *astContext;
 
-// TODO 1. Make return type of function in closure to void*
 // TODO 2. Function calls in actual argument
 
 class CodeGenerator{
@@ -223,7 +222,7 @@ public:
       std::string thunkExpression = generateThunkExpression (expr);
       std::stringstream thunkStr;
       std::string exp_type = expr->getType ().getAsString ();
-      thunkStr <<  exp_type + " *thunk"<<thunk_no<<"(void* e)\n"
+      thunkStr <<  "void *thunk"<<thunk_no<<"(void* e)\n"
                    "{\n"
                    "\tstruct env"<<thunk_no<<" *env = (struct env"<<thunk_no<<"*)e;\n"
                    "\t\n"
@@ -339,7 +338,7 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
           }
           if(found) {
             Rewrite.ReplaceText(SourceRange(declRef->getBeginLoc(), declRef->getEndLoc()),
-                "ref("+declRef->getNameInfo().getName().getAsString ()+")");
+                "ref("+declRef->getNameInfo().getName().getAsString ()+", "+declRef->getType().getAsString()+")");
           }
 
         }
@@ -353,10 +352,10 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
 //      S->dump();
       if (count++ == 0) {
         if (S) {
-          Rewrite.InsertText(S->getBeginLoc(), "#define ref(x) *x.call(x.env)\n"
+          Rewrite.InsertText(S->getBeginLoc(), "#define ref(x, type) *(type*)x.call(x.env)\n"
                                                "struct closure\n"
                                                "{\n"
-                                               "\tint* (* call)(void *);\n"
+                                               "\tvoid* (* call)(void *);\n"
                                                "\tvoid* env;\n"
                                                "};\n", true,
                              true);
