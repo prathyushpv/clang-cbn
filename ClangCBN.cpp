@@ -62,7 +62,18 @@ class RewrittenCalls{
     }
 } rewrittenCalls;
 
-
+bool isaParam(const FunctionDecl *functiondecl, const DeclRefExpr* declRef){
+  ArrayRef< ParmVarDecl * > params = functiondecl->parameters();
+  for(unsigned int paramIndex=0;paramIndex< params.size();paramIndex++){
+//            if(declRef->getNameInfo ().getName ().getAsString () == params[paramIndex]->getNameAsString())
+    if(declRef->getDecl () == (ValueDecl *)params[paramIndex])
+    {
+      return true;
+      // std::cout<<"DEBUG: found an argument of type: "<< declRef->getType ()->getTypeClassName() << "\n";
+    }
+  }
+  return false;
+}
 //std::list <const CallExpr*> rewrittenCalls;
 
 // TODO 2. Function calls in actual argument
@@ -287,13 +298,28 @@ public:
         if (members.find(name) != members.end())
           return EnvInitialization;
         members.insert(name);
+        // VarDecl *decl = dynamic_cast<const VarDecl*>((declRef)->getDecl());
+        const DeclContext *context = declRef->getDecl()->getParentFunctionOrMethod ();
+        const FunctionDecl *functionDecl = 0;
+        if (isa<clang::FunctionDecl> (context)){
+          functionDecl = (const  FunctionDecl *)context;
+        }
         if (isa<clang::ArrayType> (declRef->getType ())) {
           const clang::ArrayType *arrayType = (const clang::ArrayType*)declRef->getType ().getTypePtr();
           std::string type = arrayType->getElementType ().getAsString ();
-          EnvInitialization += name+",";
+          // if(decl->isLocalVarDeclOrParm () && !decl->isLocalVarDecl())
+          if(functionDecl && isaParam(functionDecl, declRef))
+            EnvInitialization += "ref_ptr("+name+","+ type + "), ";
+          else
+            EnvInitialization += name+",";
         } else {
           std::string type = declRef->getType ().getAsString ();
-          EnvInitialization += "&" + name + ", ";
+          // if(decl->isLocalVarDeclOrParm () && !decl->isLocalVarDecl())
+          // if(isa<ParamVarDecl> (declRef->getDecl()))
+          if(functionDecl && isaParam(functionDecl, declRef))
+            EnvInitialization += "ref_ptr("+name+","+ type + "), ";
+          else
+            EnvInitialization += "&" + name + ", ";
         }
       }
 
@@ -424,9 +450,22 @@ class CallExprHandler : public MatchFinder::MatchCallback {
     CallExprHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {thunk_count = 0;}
 
     virtual void run(const MatchFinder::MatchResult &Result) {
-      const Expr *expr = Result.Nodes.getNodeAs<clang::Expr>("callExpr");
-      SourceLocation beginLocation = expr->getBeginLoc ();
-      rewriteFunctionCall (expr, beginLocation);
+      const Stmt *stmt = Result.Nodes.getNodeAs<clang::Stmt>("callExpr");
+      SourceLocation beginLocation = stmt->getBeginLoc ();
+      
+      if(isa<clang::Expr> (stmt))
+      {
+        const Expr *expr = Result.Nodes.getNodeAs<clang::Expr>("callExpr");
+        rewriteFunctionCall (expr, beginLocation);
+
+      }
+      
+      // const DeclContext *context = declRef->getDecl()->getParentFunctionOrMethod ();
+      //   const FunctionDecl *functionDecl = 0;
+      //   if (isa<clang::FunctionDecl> (context)){
+      //     functionDecl = (const  FunctionDecl *)context;
+      //   }
+     
     }
 
     void rewriteFunctionCall(const Expr *expr, SourceLocation beginLocation){
@@ -541,7 +580,8 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
           }
 
         }
-        recursiveVisit(currStmt);
+        if(!isa<clang::CallExpr> (currStmt))
+          recursiveVisit(currStmt);
       }
       return true;
     }
@@ -552,6 +592,7 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
       if (count++ == 0) {
         if (S) {
           Rewrite.InsertText(S->getBeginLoc(), "#define ref(x, type) *(type*)x.call(x.env)\n"
+                                               "#define ref_ptr(x, type) (type*)x.call(x.env)\n"
                                                "struct closure\n"
                                                "{\n"
                                                "\tvoid* (* call)(void *);\n"
@@ -653,7 +694,7 @@ public:
     // Matcher for instrumenting call expression
     // Matcher.addMatcher(callExpr(callee(functionDecl(unless(isExpansionInSystemHeader())))).bind("callExpr"), &HandlerForCallExpr);
     // Matcher.addMatcher(callExpr().bind("callExpr"), &HandlerForCallExpr);
-    Matcher.addMatcher(expr().bind("callExpr"), &HandlerForCallExpr);
+    Matcher.addMatcher(stmt().bind("callExpr"), &HandlerForCallExpr);
 
   }
 
