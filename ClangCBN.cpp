@@ -564,10 +564,12 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
     FunctionDeclStmtHandler(Rewriter &Rewrite) : Rewrite(Rewrite) { count = 0;}
 
     bool recursiveVisit (Stmt *stmt) {
+      if(!stmt)
+          return true;
       for (Stmt::child_iterator i = stmt->child_begin(), e = stmt->child_end(); i != e; ++i) {
         Stmt *currStmt = *i;
         if(!currStmt)
-          return true;
+          continue;
         if (isa<clang::DeclRefExpr> (currStmt)) {
 //          errs() << "Hello";
           DeclRefExpr *declRef = (DeclRefExpr *) currStmt;
