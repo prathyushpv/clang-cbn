@@ -85,7 +85,7 @@ public:
       expr = expr->IgnoreImpCasts ();
 
       // check if this expression contains a binary operation
-      if (isa<clang::BinaryOperator> (expr)) {
+      if (expr && isa<clang::BinaryOperator> (expr)) {
         const BinaryOperator *biOp = (const BinaryOperator *) expr;
 
         // get the lhs and rhs of the operator
@@ -97,7 +97,7 @@ public:
         VisitExpr (rhs);
 
       }
-      if (isa<clang::ArraySubscriptExpr> (expr)) {
+      if (expr && isa<clang::ArraySubscriptExpr> (expr)) {
         const ArraySubscriptExpr *aSE = (const ArraySubscriptExpr *)expr;
         const Expr *lhs = aSE->getLHS ();
         const Expr *rhs = aSE->getRHS ();
@@ -109,7 +109,7 @@ public:
         // check other kinds of expr,
         // since my test code is simple, the recursion stops when it find DeclRefExpr
 
-      else if (isa<clang::DeclRefExpr> (expr)) {
+      else if (expr && isa<clang::DeclRefExpr> (expr)) {
         const DeclRefExpr *declRef = (const DeclRefExpr *) expr;
         // get a var name
         std::string name = (declRef->getNameInfo ()).getName ().getAsString ();
@@ -122,7 +122,7 @@ public:
       expr = expr->IgnoreImpCasts ();
 
       // check if this expression contains a binary operation
-      if (isa<clang::BinaryOperator> (expr)) {
+      if (expr && isa<clang::BinaryOperator> (expr)) {
         const BinaryOperator *biOp = (const BinaryOperator *) expr;
 
         // get the lhs and rhs of the operator
@@ -135,7 +135,7 @@ public:
         thunkExpression += generateThunkExpression (rhs, closureCount);
 
       }
-      if (isa<clang::ArraySubscriptExpr> (expr)) {
+      if (expr && isa<clang::ArraySubscriptExpr> (expr)) {
         const ArraySubscriptExpr *aSE = (const ArraySubscriptExpr *)expr;
         const Expr *lhs = aSE->getLHS ();
         const Expr *rhs = aSE->getRHS ();
@@ -149,7 +149,7 @@ public:
         // check other kinds of expr,
         // since my test code is simple, the recursion stops when it find DeclRefExpr
 
-      else if (isa<clang::DeclRefExpr> (expr)) {
+      else if (expr && isa<clang::DeclRefExpr> (expr)) {
         const DeclRefExpr *declRef = (const DeclRefExpr *) expr;
         // get a var name
         std::string name = (declRef->getNameInfo ()).getName ().getAsString ();
@@ -160,7 +160,7 @@ public:
           thunkExpression += "*env->" + name;
       }
 
-      else if (isa<clang::IntegerLiteral> (expr)) {
+      else if (expr && isa<clang::IntegerLiteral> (expr)) {
         const IntegerLiteral *integerLiteral = (const IntegerLiteral *) expr;
         std::string TypeS;
         llvm::raw_string_ostream s (TypeS);
@@ -171,7 +171,7 @@ public:
         thunkExpression += s.str();
       }
 
-      else if (isa<clang::FloatingLiteral> (expr)) {
+      else if (expr && isa<clang::FloatingLiteral> (expr)) {
         const FloatingLiteral *floatingLiteral = (const FloatingLiteral *) expr;
         std::string TypeS;
         llvm::raw_string_ostream s (TypeS);
@@ -181,7 +181,7 @@ public:
         floatingLiteral->printPretty (s, 0, Policy);
         thunkExpression += s.str();
       }
-      else if (isa<clang::CallExpr> (expr)) {
+      else if (expr && isa<clang::CallExpr> (expr)) {
         const CallExpr *callExpr = (const CallExpr *) expr;
         const FunctionDecl *functionDecl = callExpr->getDirectCallee ();
         std::string funcName = functionDecl->getNameInfo ().getName ().getAsString ();
@@ -201,7 +201,7 @@ public:
       expr = expr->IgnoreImpCasts ();
 
       // check if this expression contains a binary operation
-      if (isa<clang::BinaryOperator> (expr)) {
+      if (expr && isa<clang::BinaryOperator> (expr)) {
         const BinaryOperator *biOp = (const BinaryOperator *) expr;
 
         // get the lhs and rhs of the operator
@@ -212,7 +212,7 @@ public:
         envMembers += generateEnvMembers (rhs, members, closureCount);
 
       }
-      if (isa<clang::ArraySubscriptExpr> (expr)) {
+      if (expr && isa<clang::ArraySubscriptExpr> (expr)) {
         const ArraySubscriptExpr *aSE = (const ArraySubscriptExpr *)expr;
         const Expr *lhs = aSE->getLHS ();
         const Expr *rhs = aSE->getRHS ();
@@ -222,7 +222,7 @@ public:
         // check other kinds of expr,
         // since my test code is simple, the recursion stops when it find DeclRefExpr
 
-      else if (isa<clang::DeclRefExpr> (expr)) {
+      else if (expr && isa<clang::DeclRefExpr> (expr)) {
         const DeclRefExpr *declRef = (const DeclRefExpr *) expr;
         // get a var name
         std::string name = (declRef->getNameInfo ()).getName ().getAsString ();
@@ -239,7 +239,7 @@ public:
         }
       }
 
-      else if (isa<clang::CallExpr> (expr)){
+      else if (expr && isa<clang::CallExpr> (expr)){
         const CallExpr *callExpr = (const CallExpr *) expr;
         const FunctionDecl *functionDecl = 	callExpr->getDirectCallee ();
         std::string funcName = functionDecl->getNameInfo().getName().getAsString();
@@ -270,7 +270,7 @@ public:
       expr = expr->IgnoreImpCasts ();
 
       // check if this expression contains a binary operation
-      if (isa<clang::BinaryOperator> (expr)) {
+      if (expr && isa<clang::BinaryOperator> (expr)) {
         const BinaryOperator *biOp = (const BinaryOperator *) expr;
 
         // get the lhs and rhs of the operator
@@ -281,7 +281,7 @@ public:
         EnvInitialization += generateEnvInitialization (rhs, members, closureCount);
 
       }
-      if (isa<clang::ArraySubscriptExpr> (expr)) {
+      if (expr && isa<clang::ArraySubscriptExpr> (expr)) {
         const ArraySubscriptExpr *aSE = (const ArraySubscriptExpr *)expr;
         const Expr *lhs = aSE->getLHS ();
         const Expr *rhs = aSE->getRHS ();
@@ -291,7 +291,7 @@ public:
         // check other kinds of expr,
         // since my test code is simple, the recursion stops when it find DeclRefExpr
 
-      else if (isa<clang::DeclRefExpr> (expr)) {
+      else if (expr && isa<clang::DeclRefExpr> (expr)) {
         const DeclRefExpr *declRef = (const DeclRefExpr *) expr;
         // get a var name
         std::string name = (declRef->getNameInfo ()).getName ().getAsString ();
@@ -301,7 +301,7 @@ public:
         // VarDecl *decl = dynamic_cast<const VarDecl*>((declRef)->getDecl());
         const DeclContext *context = declRef->getDecl()->getParentFunctionOrMethod ();
         const FunctionDecl *functionDecl = 0;
-        if (isa<clang::FunctionDecl> (context)){
+        if (context && isa<clang::FunctionDecl> (context)){
           functionDecl = (const  FunctionDecl *)context;
         }
         if (isa<clang::ArrayType> (declRef->getType ())) {
@@ -345,7 +345,7 @@ public:
       //   EnvInitialization += s.str() + ",";
       // }
 
-      else if (isa<clang::CallExpr> (expr)){
+      else if (expr && isa<clang::CallExpr> (expr)){
         const CallExpr *callExpr = (const CallExpr *) expr;
         const FunctionDecl *functionDecl = 	callExpr->getDirectCallee ();
         std::string funcName = functionDecl->getNameInfo().getName().getAsString();
@@ -453,11 +453,16 @@ class CallExprHandler : public MatchFinder::MatchCallback {
       const Stmt *stmt = Result.Nodes.getNodeAs<clang::Stmt>("callExpr");
       SourceLocation beginLocation = stmt->getBeginLoc ();
       
-      if(isa<clang::Expr> (stmt))
+      if(stmt && isa<clang::Expr> (stmt))
       {
         const Expr *expr = Result.Nodes.getNodeAs<clang::Expr>("callExpr");
         rewriteFunctionCall (expr, beginLocation);
-
+      }
+      if(stmt && isa<clang::ReturnStmt> (stmt))
+      {
+        const ReturnStmt *returnStmt = (const ReturnStmt *)stmt;
+        const Expr *expr = returnStmt->getRetValue ();
+        rewriteFunctionCall (expr, beginLocation);
       }
       
       // const DeclContext *context = declRef->getDecl()->getParentFunctionOrMethod ();
@@ -561,7 +566,8 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
     bool recursiveVisit (Stmt *stmt) {
       for (Stmt::child_iterator i = stmt->child_begin(), e = stmt->child_end(); i != e; ++i) {
         Stmt *currStmt = *i;
-
+        if(!currStmt)
+          return true;
         if (isa<clang::DeclRefExpr> (currStmt)) {
 //          errs() << "Hello";
           DeclRefExpr *declRef = (DeclRefExpr *) currStmt;
@@ -580,8 +586,18 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
           }
 
         }
-        if(!isa<clang::CallExpr> (currStmt))
+        
+        if(isa<clang::CallExpr> (currStmt))
+        {
+          const CallExpr *callExpr = (const CallExpr *)currStmt;
+          bool found = (std::find(rewrittenFunctions.begin(), rewrittenFunctions.end(), callExpr->getDirectCallee()) != rewrittenFunctions.end());
+          if(!found)
+            recursiveVisit(currStmt);
+        }
+        else{
           recursiveVisit(currStmt);
+        }
+          
       }
       return true;
     }
@@ -615,8 +631,8 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
         }
         if(!S->isMain()) {
           Stmt *body = S->getBody ();
-          recursiveVisit (body);
           rewrittenFunctions.push_back(S);
+          recursiveVisit (body);
         }
       }
     }
