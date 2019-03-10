@@ -609,8 +609,8 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
 //      S->dump();
       if (count++ == 0) {
         if (S) {
-          Rewrite.InsertText(S->getBeginLoc(), "#define ref(x, type) *(type*)x.call(x.env)\n"
-                                               "#define ref_ptr(x, type) (type*)x.call(x.env)\n"
+          Rewrite.InsertText(S->getBeginLoc(), "#define ref(x, type) (*(type*)x.call(x.env))\n"
+                                               "#define ref_ptr(x, type) ((type*)x.call(x.env))\n"
                                                "struct closure\n"
                                                "{\n"
                                                "\tvoid* (* call)(void *);\n"
