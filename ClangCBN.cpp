@@ -458,12 +458,49 @@ class CallExprHandler : public MatchFinder::MatchCallback {
         const Expr *expr = Result.Nodes.getNodeAs<clang::Expr>("callExpr");
         rewriteFunctionCall (expr, beginLocation);
       }
-      if(stmt && isa<clang::ReturnStmt> (stmt))
+      else if(stmt && isa<clang::ReturnStmt> (stmt))
       {
         const ReturnStmt *returnStmt = (const ReturnStmt *)stmt;
         const Expr *expr = returnStmt->getRetValue ();
         rewriteFunctionCall (expr, beginLocation);
       }
+      else if(stmt && isa<clang::ForStmt> (stmt))
+      {
+        const ForStmt *forStmt = (const ForStmt *)stmt;
+        const Stmt *initStmt = forStmt->getInit ();
+        const Expr *cond = forStmt->getCond ();
+        const Expr *inc = forStmt->getInc ();  
+        // rewriteFunctionCall (init, beginLocation);
+        rewriteFunctionCall (cond, beginLocation);
+        rewriteFunctionCall (inc, beginLocation);
+      }
+      else if(stmt && isa<clang::IfStmt> (stmt))
+      {
+        const IfStmt *ifStmt = (const IfStmt *)stmt;
+        const Expr *expr = ifStmt->getCond ();
+        rewriteFunctionCall (expr, beginLocation);
+      }
+      else if(stmt && isa<clang::SwitchStmt> (stmt))
+      {
+        const SwitchStmt *switchStmt = (const SwitchStmt *)stmt;
+        const Expr *expr = switchStmt->getCond ();
+        rewriteFunctionCall (expr, beginLocation);
+      }
+      else if(stmt && isa<clang::WhileStmt> (stmt))
+      {
+        const WhileStmt *whileStmt = (const WhileStmt *)stmt;
+        const Expr *expr = whileStmt->getCond ();
+        rewriteFunctionCall (expr, beginLocation);
+      }
+
+      // else{
+      //     for (Stmt::child_iterator i = stmt->child_begin(), e = stmt->child_end(); i != e; ++i) {
+      //       Stmt *currStmt = *i;
+      //       if(!currStmt)
+      //         continue;
+      //       rewriteFunctionCall (currStmt, beginLocation);
+      //     }
+      //  }
       
       // const DeclContext *context = declRef->getDecl()->getParentFunctionOrMethod ();
       //   const FunctionDecl *functionDecl = 0;
@@ -610,7 +647,7 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
       if (count++ == 0) {
         if (S) {
           Rewrite.InsertText(S->getBeginLoc(), "#define ref(x, type) (*(type*)x.call(x.env))\n"
-                                               "#define ref_ptr(x, type) ((type*)x.call(x.env))\n"
+                                               "#define ref_ptr(x, type) ((type*)x.call(x.env))\n\n"
                                                "struct closure\n"
                                                "{\n"
                                                "\tvoid* (* call)(void *);\n"
