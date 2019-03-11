@@ -473,7 +473,28 @@ class CallExprHandler : public MatchFinder::MatchCallback {
         // rewriteFunctionCall (init, beginLocation);
         rewriteFunctionCall (cond, beginLocation);
         rewriteFunctionCall (inc, beginLocation);
+        if(initStmt && isa<clang::Expr> (initStmt))
+        {
+          const Expr *initExpr = (const Expr *)initStmt;
+          rewriteFunctionCall (initExpr, beginLocation);
+        }
+        else if(initStmt && isa<clang::DeclStmt> (initStmt))
+        {
+          const DeclStmt *declStmt = (const DeclStmt *)initStmt;
+          const DeclGroupRef declGroup = declStmt->getDeclGroup ();
+          for (DeclGroupRef::const_iterator i = declGroup.begin(), e = declGroup.end(); i != e; ++i) {
+              Decl *decl = *i;
+              if(decl && isa<clang::VarDecl> (decl))
+              {
+                VarDecl *varDecl = (VarDecl *)decl;
+                const Expr *expr = varDecl->getInit ();
+                rewriteFunctionCall (expr, beginLocation);
+              }
+
+          }
+        }
       }
+
       else if(stmt && isa<clang::IfStmt> (stmt))
       {
         const IfStmt *ifStmt = (const IfStmt *)stmt;
@@ -491,6 +512,30 @@ class CallExprHandler : public MatchFinder::MatchCallback {
         const WhileStmt *whileStmt = (const WhileStmt *)stmt;
         const Expr *expr = whileStmt->getCond ();
         rewriteFunctionCall (expr, beginLocation);
+      }
+      else if(stmt && isa<clang::DeclStmt> (stmt))
+      {
+        const DeclStmt *declStmt = (const DeclStmt *)stmt;
+        const DeclGroupRef declGroup = declStmt->getDeclGroup ();
+        for (DeclGroupRef::const_iterator i = declGroup.begin(), e = declGroup.end(); i != e; ++i) {
+            Decl *decl = *i;
+            if(decl && isa<clang::VarDecl> (decl))
+            {
+              VarDecl *varDecl = (VarDecl *)decl;
+              // if(!varDecl)
+              // continue;
+              const Expr *expr = varDecl->getInit ();
+              rewriteFunctionCall (expr, beginLocation);
+            }
+            
+            // rewriteFunctionCall (currStmt, beginLocation);
+        }
+        // if(decl && isa<clang::VarDecl> (decl))
+        // {
+        //   const VarDecl *varDecl = (const VarDecl *)decl;
+        //   const Expr *expr = varDecl->getInit ();
+        //   rewriteFunctionCall (expr, beginLocation);
+        // }
       }
 
       // else{
@@ -806,3 +851,4 @@ int main(int argc, const char **argv) {
 
   return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }
+
