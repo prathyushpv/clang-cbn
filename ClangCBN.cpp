@@ -358,10 +358,11 @@ public:
         if (members.find(funcName) == members.end())
           EnvInitialization +=  funcName + ",";
         members.insert(funcName);
-        unsigned int argNum = callExpr->getNumArgs ();
-        for (unsigned i = 0; i < argNum; i++) {
-          EnvInitialization += "c_" + std::to_string(closureCount++) + ", ";
-        }
+        EnvInitialization += rewrittenCalls.getClosures(callExpr);
+        // unsigned int argNum = callExpr->getNumArgs ();
+        // for (unsigned i = 0; i < argNum; i++) {
+        //   EnvInitialization += "c_" + std::to_string(closureCount++) + ", ";
+        // }
       }
       return EnvInitialization;
     }
@@ -410,7 +411,7 @@ public:
       std::set<std::string> members;
       int closureCount = 0;
       std::string envInitialization = generateEnvInitialization(expr, members, closureCount);
-      envInitialization = envInitialization.substr(0, envInitialization.size()-2);
+      // envInitialization = envInitialization.substr(0, envInitialization.size()-2);
       std::stringstream envInitStr;
       envInitStr << "struct env"<<thunk_no<<" e"<<thunk_no<<" = {"<<envInitialization<<"};\n";
       envInitStr << "struct closure c_"<<thunk_no<<" = {thunk"<<thunk_no<<", &e"<<thunk_no<<"};\n";
