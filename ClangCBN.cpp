@@ -65,18 +65,13 @@ class RewrittenCalls{
 bool isaParam(const FunctionDecl *functiondecl, const DeclRefExpr* declRef){
   ArrayRef< ParmVarDecl * > params = functiondecl->parameters();
   for(unsigned int paramIndex=0;paramIndex< params.size();paramIndex++){
-//            if(declRef->getNameInfo ().getName ().getAsString () == params[paramIndex]->getNameAsString())
     if(declRef->getDecl () == (ValueDecl *)params[paramIndex])
     {
       return true;
-      // std::cout<<"DEBUG: found an argument of type: "<< declRef->getType ()->getTypeClassName() << "\n";
     }
   }
   return false;
 }
-//std::list <const CallExpr*> rewrittenCalls;
-
-// TODO 2. Function calls in actual argument
 
 class CodeGenerator{
 public:
@@ -135,15 +130,25 @@ public:
         thunkExpression += generateThunkExpression (rhs, closureCount);
 
       }
+      if (expr && isa<clang::ConditionalOperator> (expr)) {
+        const ConditionalOperator *condOp = (const ConditionalOperator *) expr;
+        Expr *condExp = condOp->getCond ();
+        Expr *trueExp = condOp->getTrueExpr ();
+        Expr *falseExp = condOp->getFalseExpr ();
+        // recursively visit each one
+        thunkExpression += generateThunkExpression (condExp, closureCount);
+        thunkExpression += "?";
+        thunkExpression += generateThunkExpression (trueExp, closureCount);
+        thunkExpression += ":";
+        thunkExpression += generateThunkExpression (falseExp, closureCount);
+      }
       if (expr && isa<clang::ArraySubscriptExpr> (expr)) {
         const ArraySubscriptExpr *aSE = (const ArraySubscriptExpr *)expr;
         const Expr *lhs = aSE->getLHS ();
         const Expr *rhs = aSE->getRHS ();
         thunkExpression += generateThunkExpression (lhs, closureCount);
-//        std::cout<<"[";
         thunkExpression += "[";
         thunkExpression += generateThunkExpression (rhs, closureCount);
-//        std::cout<<"]";
         thunkExpression += "]";
       }
         // check other kinds of expr,
@@ -153,7 +158,6 @@ public:
         const DeclRefExpr *declRef = (const DeclRefExpr *) expr;
         // get a var name
         std::string name = (declRef->getNameInfo ()).getName ().getAsString ();
-//        std::cout << name;
         if (isa<clang::ArrayType> (declRef->getType ()))
           thunkExpression += "env->" + name;
         else
@@ -212,6 +216,16 @@ public:
         envMembers += generateEnvMembers (rhs, members, closureCount);
 
       }
+      if (expr && isa<clang::ConditionalOperator> (expr)) {
+        const ConditionalOperator *condOp = (const ConditionalOperator *) expr;
+        Expr *condExp = condOp->getCond ();
+        Expr *trueExp = condOp->getTrueExpr ();
+        Expr *falseExp = condOp->getFalseExpr ();
+        // recursively visit each one
+        envMembers += generateEnvMembers (condExp, members, closureCount);
+        envMembers += generateEnvMembers (trueExp, members, closureCount);
+        envMembers += generateEnvMembers (falseExp, members, closureCount);
+      }
       if (expr && isa<clang::ArraySubscriptExpr> (expr)) {
         const ArraySubscriptExpr *aSE = (const ArraySubscriptExpr *)expr;
         const Expr *lhs = aSE->getLHS ();
@@ -237,8 +251,6 @@ public:
             arrayType = (const clang::ArrayType*)arrayType->getElementType ().getTypePtr ();
             star += "*";
           }
-          
-          
           std::string type = arrayType->getElementType ().getAsString ();
           envMembers += "\t" +type+" *"+ name+";\n";
         } else {
@@ -289,6 +301,16 @@ public:
         EnvInitialization += generateEnvInitialization (rhs, members, closureCount);
 
       }
+      if (expr && isa<clang::ConditionalOperator> (expr)) {
+        const ConditionalOperator *condOp = (const ConditionalOperator *) expr;
+        Expr *condExp = condOp->getCond ();
+        Expr *trueExp = condOp->getTrueExpr ();
+        Expr *falseExp = condOp->getFalseExpr ();
+        // recursively visit each one
+        EnvInitialization += generateEnvInitialization (condExp, members, closureCount);
+        EnvInitialization += generateEnvInitialization (trueExp, members, closureCount);
+        EnvInitialization += generateEnvInitialization (falseExp, members, closureCount);
+      }
       if (expr && isa<clang::ArraySubscriptExpr> (expr)) {
         const ArraySubscriptExpr *aSE = (const ArraySubscriptExpr *)expr;
         const Expr *lhs = aSE->getLHS ();
@@ -322,36 +344,12 @@ public:
             EnvInitialization += name+",";
         } else {
           std::string type = declRef->getType ().getAsString ();
-          // if(decl->isLocalVarDeclOrParm () && !decl->isLocalVarDecl())
-          // if(isa<ParamVarDecl> (declRef->getDecl()))
           if(functionDecl && isaParam(functionDecl, declRef))
             EnvInitialization += "ref_ptr("+name+","+ type + "), ";
           else
             EnvInitialization += "&" + name + ", ";
         }
       }
-
-      // else if (isa<clang::IntegerLiteral> (expr)) {
-      //   const IntegerLiteral *integerLiteral = (const IntegerLiteral *) expr;
-      //   std::string TypeS;
-      //   llvm::raw_string_ostream s (TypeS);
-      //   clang::LangOptions LangOpts;
-      //   LangOpts.CPlusPlus = true;
-      //   clang::PrintingPolicy Policy(LangOpts);
-      //   integerLiteral->printPretty (s, 0, Policy);
-      //   EnvInitialization += s.str() + ",";
-      // }
-
-      // else if (isa<clang::FloatingLiteral> (expr)) {
-      //   const FloatingLiteral *floatingLiteral = (const FloatingLiteral *) expr;
-      //   std::string TypeS;
-      //   llvm::raw_string_ostream s (TypeS);
-      //   clang::LangOptions LangOpts;
-      //   LangOpts.CPlusPlus = true;
-      //   clang::PrintingPolicy Policy(LangOpts);
-      //   floatingLiteral->printPretty (s, 0, Policy);
-      //   EnvInitialization += s.str() + ",";
-      // }
 
       else if (expr && isa<clang::CallExpr> (expr)){
         const CallExpr *callExpr = (const CallExpr *) expr;
@@ -360,14 +358,10 @@ public:
         if (members.find(funcName) == members.end())
           EnvInitialization +=  funcName + ",";
         members.insert(funcName);
-        // EnvInitialization +=  funcName + ",";
         unsigned int argNum = callExpr->getNumArgs ();
         for (unsigned i = 0; i < argNum; i++) {
           EnvInitialization += "c_" + std::to_string(closureCount++) + ", ";
         }
-        // std::string closures = rewrittenCalls.getClosures (callExpr);
-        // if (closures.length() > 0)
-        //   EnvInitialization += closures + ",";
       }
       return EnvInitialization;
     }
@@ -395,7 +389,6 @@ public:
                  <<  "}\n";
 
       std::string thunk = thunkStr.str();
-//      std::cout<<thunk;
       return thunk;
     }
 
@@ -403,7 +396,6 @@ public:
       std::set<std::string> members;
       int closureCount = 0;
       std::string envMembers = generateEnvMembers (expr, members, closureCount);
-//      std::string result_var =
       std::stringstream envStr;
       envStr << "struct env"<<thunk_no<<"\n"
                  <<"{\n"
@@ -411,8 +403,6 @@ public:
                  <<(!expr->IgnoreImpCasts ()->isLValue()?"\t"+expr->getType ().getAsString ()+" __cbn_result;\n":"")
                  <<"};\n";
       std::string env = envStr.str();
-//      std::cout<<expr->getType ().getAsString ()<<"\n\n\n\n";
-//      std::cout<<env;
       return env;
     }
 
@@ -428,8 +418,7 @@ public:
       return envInit;
     }
   };
-//const SourceManager sm;
-//////////////new class
+
 static llvm::cl::OptionCategory MatcherSampleCategory("Matcher Sample");
 
 class IfStmtHandler : public MatchFinder::MatchCallback {
@@ -530,45 +519,40 @@ class CallExprHandler : public MatchFinder::MatchCallback {
             if(decl && isa<clang::VarDecl> (decl))
             {
               VarDecl *varDecl = (VarDecl *)decl;
-              // if(!varDecl)
-              // continue;
+              if(!varDecl)
+                continue;
               const Expr *expr = varDecl->getInit ();
               rewriteFunctionCall (expr, beginLocation);
             }
-            
-            // rewriteFunctionCall (currStmt, beginLocation);
         }
-        // if(decl && isa<clang::VarDecl> (decl))
-        // {
-        //   const VarDecl *varDecl = (const VarDecl *)decl;
-        //   const Expr *expr = varDecl->getInit ();
-        //   rewriteFunctionCall (expr, beginLocation);
-        // }
-      }
 
-      // else{
-      //     for (Stmt::child_iterator i = stmt->child_begin(), e = stmt->child_end(); i != e; ++i) {
-      //       Stmt *currStmt = *i;
-      //       if(!currStmt)
-      //         continue;
-      //       rewriteFunctionCall (currStmt, beginLocation);
-      //     }
-      //  }
-      
-      // const DeclContext *context = declRef->getDecl()->getParentFunctionOrMethod ();
-      //   const FunctionDecl *functionDecl = 0;
-      //   if (isa<clang::FunctionDecl> (context)){
-      //     functionDecl = (const  FunctionDecl *)context;
-      //   }
-     
+      }
     }
 
     void rewriteFunctionCall(const Expr *expr, SourceLocation beginLocation){
-//      bool found = (std::find(rewrittenCalls.begin(), rewrittenCalls.end(), callExpr) != rewrittenCalls.end());
+      if (expr && isa<clang::BinaryOperator> (expr)) {
+        const BinaryOperator *biOp = (const BinaryOperator *) expr;
+
+        // get the lhs and rhs of the operator
+        const Expr *lhs = biOp->getLHS ();
+        const Expr *rhs = biOp->getRHS ();
+        // recursively visit each one
+        rewriteFunctionCall(lhs, beginLocation);
+        rewriteFunctionCall(rhs, beginLocation);
+
+      }
+      if (expr && isa<clang::ConditionalOperator> (expr)) {
+        const ConditionalOperator *condOp = (const ConditionalOperator *) expr;
+        Expr *condExp = condOp->getCond ();
+        Expr *trueExp = condOp->getTrueExpr ();
+        Expr *falseExp = condOp->getFalseExpr ();
+        // recursively visit each one
+        rewriteFunctionCall (condExp, beginLocation);
+        rewriteFunctionCall (trueExp, beginLocation);
+        rewriteFunctionCall (falseExp, beginLocation);
+      }
       if (expr && isa<clang::CallExpr> (expr)) {
         const CallExpr *callExpr = (const CallExpr*) expr;
-        // if (callExpr->getDirectCallee()->isExternC())
-        //   return;
         bool found1 = (std::find(rewrittenFunctions.begin(), rewrittenFunctions.end(), callExpr->getDirectCallee()) != rewrittenFunctions.end());
         if (!found1)
           return;
@@ -583,13 +567,10 @@ class CallExprHandler : public MatchFinder::MatchCallback {
         // Checking if there is any non rewritten calls in argument list
         for (unsigned i = 0; i < argNum; i++) {
           if (isa<clang::CallExpr> (callExpr->getArg (i))) {
-            //          std::cout << "\n\nFound a call\n\n";
             const CallExpr *arg = (const CallExpr *) callExpr->getArg (i);
-            //          bool found = (std::find(rewrittenCalls.begin(), rewrittenCalls.end(), arg) != rewrittenCalls.end());
             bool found = rewrittenCalls.isPresent (arg);
             if (!found) {
               rewriteFunctionCall (arg, beginLocation);
-              //            rewrittenCalls.push_back(arg);
             }
           }
           if (isa<clang::BinaryOperator> (callExpr->getArg (i))) {
@@ -602,11 +583,18 @@ class CallExprHandler : public MatchFinder::MatchCallback {
             rewriteFunctionCall (lhs, beginLocation);
             rewriteFunctionCall (rhs, beginLocation);
           }
+          if (isa<clang::ConditionalOperator> (callExpr->getArg (i))) {
+            const ConditionalOperator *condOp = (const ConditionalOperator *) callExpr->getArg (i);
+            Expr *condExp = condOp->getCond ();
+            Expr *trueExp = condOp->getTrueExpr ();
+            Expr *falseExp = condOp->getFalseExpr ();
+            // recursively visit each one
+            rewriteFunctionCall (condExp, beginLocation);
+            rewriteFunctionCall (trueExp, beginLocation);
+            rewriteFunctionCall (falseExp, beginLocation);
+          }
         }
         if (/*callExpr &&*/ !callExpr->getCalleeDecl ()->isExported ()) {
-          //        if(! callExpr->getCalleeDecl()->isExported()) {
-
-          //        SourceLocation beginLocation = callExpr->getBeginLoc ();
           for (unsigned i = 0; i < argNum; i++) {
             std::string TypeS;
             llvm::raw_string_ostream s (TypeS);
@@ -619,9 +607,6 @@ class CallExprHandler : public MatchFinder::MatchCallback {
             Rewrite.InsertText (initialLocation, thunk, true, true);
             std::string instrumentation = codeGen.generateInstrumentation (callExpr->getArg (i), thunk_count);
             Rewrite.InsertText (beginLocation, instrumentation, true, true);
-            //            std::cout<<std::endl;
-            //          llvm::errs() << "arg: " << s.str() << "\n";
-            //          callExpr->getArg(i)->dump();
             closure_list += "c_" + std::to_string (thunk_count) + ", ";
             thunk_count++;
           }
@@ -661,15 +646,12 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
         if(!currStmt)
           continue;
         if (isa<clang::DeclRefExpr> (currStmt)) {
-//          errs() << "Hello";
           DeclRefExpr *declRef = (DeclRefExpr *) currStmt;
           bool found = false;
           for(unsigned int paramIndex=0;paramIndex< params.size();paramIndex++){
-//            if(declRef->getNameInfo ().getName ().getAsString () == params[paramIndex]->getNameAsString())
             if(declRef->getDecl () == (ValueDecl *)params[paramIndex])
             {
               found = true;
-              // std::cout<<"DEBUG: found an argument of type: "<< declRef->getType ()->getTypeClassName() << "\n";
             }
           }
           if(found) {
@@ -711,14 +693,10 @@ class FunctionDeclStmtHandler : public MatchFinder::MatchCallback {
         }
       }
       if(S){
-//        S->getBeginLoc().dump(Result.SourceManager);
-//        S->getEndLoc().dump(Result.SourceManager);
 
         params = S->parameters();
         for(unsigned int i=0;i< params.size();i++)
         {
-
-//          Rewrite.ReplaceText(params[i]->getSourceRange(), params[i]->getType().getAsString()+"* (*"+params[i]->getNameAsString()+")()");
           Rewrite.ReplaceText(params[i]->getSourceRange(), "struct closure "+params[i]->getNameAsString());
         }
         if(!S->isMain()) {
@@ -749,51 +727,12 @@ private:
   Rewriter &Rewrite;
 };
 
-//class DeclRefExprHandler : public MatchFinder::MatchCallback {
-//  public:
-//    DeclRefExprHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {}
-//
-//    virtual void run(const MatchFinder::MatchResult &Result) {
-//      const DeclRefExpr *declRefExpr = Result.Nodes.getNodeAs<DeclRefExpr>("DeclRefExpr");
-//      const Stmt *ST = Result.Nodes.getNodeAs<Stmt>("DeclRefExpr");
-//      while (true) {
-//        //get parents
-//        const auto& parents = astContext->getParents(*ST);
-//        if ( parents.empty() ) {
-//          llvm::errs() << "Can not find parent\n";
-////          return false;
-//        }
-////        llvm::errs() << "find parent size=" << parents.size() << "\n";
-//        ST = parents[0].get<Stmt>();
-//        if (!ST)
-////          llvm::errs() << "Can not find parent hoy hoy\n";
-//          return;
-//
-//        if (isa<CompoundStmt>(ST))
-//          break;
-//      }
-////      ST->dump();
-////      Rewrite.InsertText(declRefExpr->getBeginLoc(), "hi", true, true);
-//
-////      if(isa<ParmVar>(ST)){
-////        std::cout<<"pppprrrrmmmvaaarrr foundd";
-////      }
-//
-//    }
-//
-//  private:
-//    Rewriter &Rewrite;
-//  };
-
 // Implementation of the ASTConsumer interface for reading an AST produced
 // by the Clang parser. It registers a couple of matchers and runs them on
 // the AST.
 class MyASTConsumer : public ASTConsumer {
 public:
   MyASTConsumer(Rewriter &R) : HandlerForFuncionDecl(R), HandlerForCallExpr(R) {
-
-
-    // Matcher for adding instrumentation before first function declaration and in all function definitions
     Matcher.addMatcher(functionDecl(
         isDefinition(),
         unless(isExpansionInSystemHeader())
@@ -807,9 +746,6 @@ public:
   }
 
   void HandleTranslationUnit(ASTContext &Context) override {
-    // Run the matchers when we have the whole TU parsed.
-//    TranslationUnitDecl *TU = Context.getTranslationUnitDecl ();
-//    TU->dump();
     astContext = &Context;
     Matcher.matchAST(Context);
   }
@@ -819,7 +755,6 @@ private:
   CallExprHandler HandlerForCallExpr;
   MatchFinder Matcher;
 };
-////////////////////////
 
 StatementMatcher LoopMatcher =
   forStmt(hasLoopInit(declStmt(hasSingleDecl(varDecl(
@@ -833,7 +768,6 @@ public :
   }
 };
 
-// For each source file provided to the tool, a new FrontendAction is created.
 class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}
@@ -844,7 +778,6 @@ public:
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef file) override {
-//    sm = CI.getSourceManager();
     TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
     return llvm::make_unique<MyASTConsumer>(TheRewriter);
   }
