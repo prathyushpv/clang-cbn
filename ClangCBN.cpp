@@ -230,7 +230,15 @@ public:
           return envMembers;
         members.insert(name);
         if (isa<clang::ArrayType> (declRef->getType ())) {
+          std::string star = "*";
           const clang::ArrayType *arrayType = (const clang::ArrayType*)declRef->getType ().getTypePtr();
+          while (arrayType && isa<clang::ArrayType> (arrayType->getElementType ()))
+          {
+            arrayType = (const clang::ArrayType*)arrayType->getElementType ().getTypePtr ();
+            star += "*";
+          }
+          
+          
           std::string type = arrayType->getElementType ().getAsString ();
           envMembers += "\t" +type+" *"+ name+";\n";
         } else {
